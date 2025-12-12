@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover" />
-  <title>AK/EP 抢单模拟测试页</title>
+  <title>AK/EP 抢单全流程模拟</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@2.12/lib/index.css" />
 
   <style>
-    /* === 基础样式模拟 (base.css) === */
+    /* === 基础样式模拟 === */
     body { background-color: #f5f5f5; font-family: sans-serif; margin: 0; padding: 0; }
     [v-cloak] { display: none; }
 
-    /* === 列表样式模拟 (ep.list.css) === */
+    /* === 列表样式模拟 === */
     .EpList { padding-top: 10px; padding-bottom: 60px; }
     .items { display: flex; flex-direction: column; gap: 20px; padding: 15px; }
     
@@ -26,9 +26,8 @@
       cursor: pointer;
     }
 
-    /* 模拟选中/点击特效的样式 */
+    /* 模拟选中/点击特效的样式 (脚本注入的样式会覆盖这个，这里只是为了演示) */
     .ak-target-hit {
-      animation: ak-sniper-shake 0.4s ease-out !important;
       border: 2px solid red !important;
     }
 
@@ -57,6 +56,24 @@
       text-align: center;
     }
     
+    /* === 成功页模拟样式 (新增) === */
+    #success-page {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #fff; z-index: 1001; /* 比详情页更高 */
+      display: flex; flex-direction: column;
+    }
+    .success-content {
+      padding: 40px 20px;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .success-icon { margin-bottom: 20px; }
+    .success-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #333; }
+    .success-desc { font-size: 14px; color: #999; line-height: 1.5; margin-bottom: 40px; }
+    .success-btns { width: 100%; display: flex; flex-direction: column; gap: 15px; }
+    .btn-green { background-color: #67C23A; color: white; border: none; }
+    .btn-white { background-color: white; color: #666; border: 1px solid #ebedf0; }
+
     /* 底部购买栏 */
     .van-goods-action { z-index: 1000; }
     .van-goods-action-button { height: 50px; font-weight: bold; font-size: 16px; }
@@ -66,7 +83,7 @@
 <body>
   <div id="app" v-cloak>
     
-    <div class="EpList" v-show="!showDetail">
+    <div class="EpList" v-show="!showDetail && !showSuccess">
       <van-tabs v-model="tabActive" @click="onTabClick">
         <van-tab v-for="(item, index) in tabControl" :key="index" :title="item.title">
           
@@ -99,7 +116,6 @@
                   </div>
                 </div>
               </div>
-
             </van-list>
           </van-pull-refresh>
 
@@ -129,24 +145,44 @@
       </van-goods-action>
     </div>
 
+    <div id="success-page" v-if="showSuccess">
+      <van-nav-bar title="操作結果" left-arrow @click-left="goBackToList"></van-nav-bar>
+      
+      <div class="success-content">
+        <div class="success-icon">
+          <van-icon name="checked" color="#07c160" size="80" />
+        </div>
+        
+        <div class="success-title">搶單成功，請盡快付款</div>
+        
+        <div class="success-desc">
+          為了避免您的交易信用降低，請您及時轉賬給賣家並在“買賣中心”中點擊“確認付款”按鈕
+        </div>
+
+        <div class="success-btns">
+          <van-button size="large" class="btn-green">返回玩家账户 (ID)</van-button>
+          
+          <van-button size="large" class="btn-white" @click="goBackToList">
+            返回出售列表
+          </van-button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6/dist/vue.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vant@2.12/lib/vant.min.js"></script>
 
   <script>
-    // === 1. 模拟 APP 全局对象 (Base.js) ===
     window.APP = {
       GLOBAL: {
         getUserModel: () => ({ FlowNumber: 'MyUser123' }),
         toastMsg: (msg) => vant.Toast(msg)
       },
-      CONFIG: {
-        BASE_Shunt: 'https://mock-api.com/'
-      }
+      CONFIG: { BASE_Shunt: 'https://mock-api.com/' }
     };
 
-    // === 2. 模拟语言包 LSE ===
     const mockLanguage = {
       INPUT_PLAYER_ID: '请输入玩家ID',
       SEARCH: '搜索',
@@ -154,78 +190,49 @@
       RECEIVE_BUTTON: '确认收款'
     };
 
-    // === 3. Vue 实例 ===
     window._vue = new Vue({
       el: '#app',
       data: {
         tabActive: 0,
         showDetail: false,
-        currentItem: {}, // 当前选中的订单
+        showSuccess: false, // 新增：控制成功页显示
+        currentItem: {},
         language: mockLanguage,
         language2: { t1: '下拉刷新', t2: '释放刷新', t3: '加载中...', t4: '刷新成功' },
         language3: { t1: '没有更多了' },
         currentUser: { FlowNumber: 'Me' },
-        
-        // 模拟 Tab 数据结构
         tabControl: [
           {
-            title: '挂單中', // 对应脚本寻找的列表
-            list: [],
-            pageIndex: 0,
-            isLoading: false,
-            loading: false,
-            finished: false,
-            isReloading: false
+            title: '挂單中', 
+            list: [], pageIndex: 0, isLoading: false, loading: false, finished: false, isReloading: false
           },
           { title: '交易中', list: [] },
           { title: '已完成', list: [] }
         ]
       },
       methods: {
-        // 模拟加载数据 (Mock API)
         loadPageData() {
           const tab = this.tabControl[this.tabActive];
-          tab.isLoading = true; // 模拟 isLoading 状态
-          
+          tab.isLoading = true;
           console.log('[Mock] Loading data...');
           
           setTimeout(() => {
-            // 模拟 API 返回的订单数据
             const mockData = [
               {
-                Id: 101,
-                EPAmount: 290,
-                Netincome: 265,
-                Currency: 'USDT',
-                Nation: 'Global-USDT',
-                StatusName: '出售中',
-                CreateTime: '2025/12/11 16:18:40',
+                Id: 101, EPAmount: 290, Netincome: 265, Currency: 'USDT', Nation: 'Global-USDT',
+                StatusName: '出售中', CreateTime: '2025/12/11 16:18:40',
                 Seller: { FlowNumber: 'qx1818', Avatar: '' }
               },
               {
-                Id: 102,
-                EPAmount: 500,
-                Netincome: 480,
-                Currency: 'USDT',
-                Nation: 'Global-USDT',
-                StatusName: '出售中',
-                CreateTime: '2025/12/11 16:20:00',
+                Id: 102, EPAmount: 500, Netincome: 480, Currency: 'USDT', Nation: 'Global-USDT',
+                StatusName: '出售中', CreateTime: '2025/12/11 16:20:00',
                 Seller: { FlowNumber: 'seller02', Avatar: '' }
               }
             ];
-
-            if (this.tabActive === 0) {
-              tab.list = mockData;
-            } else {
-              tab.list = [];
-            }
-            
-            tab.loading = false;
-            tab.isLoading = false; // 关键：脚本会检测这个状态变化
-            tab.isReloading = false;
-            
-            console.log('[Mock] Data loaded.', tab.list);
-          }, 500); // 500ms 延迟模拟网络请求
+            if (this.tabActive === 0) { tab.list = mockData; } else { tab.list = []; }
+            tab.loading = false; tab.isLoading = false; tab.isReloading = false;
+            console.log('[Mock] Data loaded.');
+          }, 500); 
         },
 
         onRefresh() {
@@ -234,55 +241,59 @@
         },
 
         loadMore() {
-          // 简单模拟加载更多
           setTimeout(() => {
             this.tabControl[this.tabActive].loading = false;
             this.tabControl[this.tabActive].finished = true;
           }, 500);
         },
 
-        onTabClick() {
-          this.loadPageData();
-        },
+        onTabClick() { this.loadPageData(); },
 
-        // === 模拟点击进入详情页 ===
         gotoDetail(item) {
           console.log('[Mock] Clicked Item:', item);
           this.currentItem = item;
-          this.showDetail = true; // 切换显示详情视图
+          this.showDetail = true;
         },
 
-        closeDetail() {
-          this.showDetail = false;
-        },
+        closeDetail() { this.showDetail = false; },
 
-        // === 模拟点击购买按钮 -> 弹出确认窗 ===
+        // === 核心逻辑：模拟点击购买流程 ===
         onBuyClick() {
           console.log('[Mock] Buy Clicked. Showing Dialog...');
           
-          // 使用 Vant Dialog，它会生成 .van-dialog__confirm 按钮
-          // 这是脚本第二步寻找的目标
           this.$dialog.confirm({
             title: '購買EP交易確認',
             message: '确认要购买此订单吗？',
-            confirmButtonText: '確認', // 繁体，匹配脚本关键字
+            confirmButtonText: '確認', 
             cancelButtonText: '取消'
           })
           .then(() => {
-            this.$toast.success('搶單成功'); // 脚本通过检测这个文字判断成功
+            // 模拟服务器延迟
+            this.$toast.loading({ duration: 0, forbidClick: true, message: '抢单中...' });
+            
             setTimeout(() => {
+              this.$toast.clear();
+              // 跳转到成功页
               this.showDetail = false;
-            }, 1000);
+              this.showSuccess = true; 
+              console.log('[Mock] Order Success. Redirected to Result Page.');
+            }, 800);
           })
-          .catch(() => {
-            // on cancel
-          });
+          .catch(() => {});
+        },
+
+        // 模拟返回列表页
+        goBackToList() {
+          console.log('[Mock] Returning to list...');
+          this.showSuccess = false;
+          this.showDetail = false;
+          this.loadPageData(); // 重新加载列表，模拟刷新
         },
         
-        numberFormat(val) { return val; } // 辅助函数 mock
+        numberFormat(val) { return val; }
       },
       mounted() {
-        this.loadPageData(); // 页面加载自动拉取数据
+        this.loadPageData();
       }
     });
   </script>
