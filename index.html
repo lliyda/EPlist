@@ -3,78 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover" />
-  <title>AK/EP 抢单全流程模拟</title>
+  <title>AK/EP 真实环境模拟 (延迟出单)</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@2.12/lib/index.css" />
 
   <style>
-    /* === 基础样式模拟 === */
     body { background-color: #f5f5f5; font-family: sans-serif; margin: 0; padding: 0; }
     [v-cloak] { display: none; }
 
-    /* === 列表样式模拟 === */
+    /* 列表容器 */
     .EpList { padding-top: 10px; padding-bottom: 60px; }
-    .items { display: flex; flex-direction: column; gap: 20px; padding: 15px; }
+    .items { display: flex; flex-direction: column; gap: 20px; padding: 15px; min-height: 200px; }
     
-    /* 核心 DOM 结构：脚本寻找的目标 */
+    /* 核心 DOM：订单卡片 */
     .items .item {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      position: relative;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      cursor: pointer;
+      background: #fff; border-radius: 10px; padding: 15px;
+      position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
     }
 
-    /* 模拟选中/点击特效的样式 (脚本注入的样式会覆盖这个，这里只是为了演示) */
-    .ak-target-hit {
-      border: 2px solid red !important;
-    }
+    /* 空状态提示 */
+    .empty-tip { text-align: center; color: #999; padding-top: 50px; }
 
     .item .top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
     .item .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; }
     .item .name { font-weight: bold; font-size: 16px; }
-    
     .item .center { display: flex; justify-content: space-around; margin-bottom: 10px; }
     .center-item { text-align: center; }
     .center-item .value { font-size: 20px; font-weight: bold; color: #000; }
     .center-item .label { font-size: 12px; color: #666; }
-
     .item .bottom { 
       background: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%);
       color: #fff; padding: 5px 15px; border-radius: 20px; 
       display: flex; justify-content: space-between; font-size: 12px;
     }
 
-    /* === 详情页模拟样式 === */
+    /* 详情页 */
     #detail-page {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #f5f5f5; z-index: 999; display: flex; flex-direction: column;
     }
-    .detail-card {
-      margin: 20px; background: #fff; border-radius: 10px; padding: 20px;
-      text-align: center;
-    }
+    .detail-card { margin: 20px; background: #fff; border-radius: 10px; padding: 20px; text-align: center; }
     
-    /* === 成功页模拟样式 (新增) === */
+    /* 成功页 */
     #success-page {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #fff; z-index: 1001; /* 比详情页更高 */
-      display: flex; flex-direction: column;
+      background: #fff; z-index: 1001; display: flex; flex-direction: column;
     }
-    .success-content {
-      padding: 40px 20px;
-      text-align: center;
-      display: flex; flex-direction: column; align-items: center;
-    }
-    .success-icon { margin-bottom: 20px; }
-    .success-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: #333; }
-    .success-desc { font-size: 14px; color: #999; line-height: 1.5; margin-bottom: 40px; }
+    .success-content { padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .success-title { font-size: 20px; font-weight: bold; margin: 10px 0; color: #333; }
+    .success-desc { font-size: 14px; color: #999; margin-bottom: 40px; }
     .success-btns { width: 100%; display: flex; flex-direction: column; gap: 15px; }
-    .btn-green { background-color: #67C23A; color: white; border: none; }
-    .btn-white { background-color: white; color: #666; border: 1px solid #ebedf0; }
-
-    /* 底部购买栏 */
+    
     .van-goods-action { z-index: 1000; }
     .van-goods-action-button { height: 50px; font-weight: bold; font-size: 16px; }
   </style>
@@ -86,29 +65,26 @@
     <div class="EpList" v-show="!showDetail && !showSuccess">
       <van-tabs v-model="tabActive" @click="onTabClick">
         <van-tab v-for="(item, index) in tabControl" :key="index" :title="item.title">
-          
           <van-pull-refresh v-model="item.isReloading" @refresh="onRefresh">
-            <van-list
-              v-model="item.loading"
-              :finished="item.finished"
-              finished-text="没有更多了"
-              @load="loadMore"
-            >
+            <van-list v-model="item.loading" :finished="item.finished" finished-text="没有更多了" @load="loadMore">
+              
+              <div style="text-align:center;font-size:12px;color:red;padding:5px;">
+                模拟刷新次数: {{ refreshCount }} (第 4 次出单)
+              </div>
+
               <div class="items">
+                <div v-if="item.list.length === 0" class="empty-tip">
+                  暂无订单，等待刷新...
+                </div>
+
                 <div class="item" v-for="(_item, _index) of item.list" :key="_index" @click="gotoDetail(_item)">
                   <div class="top">
                     <div class="avatar"></div>
                     <div class="name">{{ _item.Seller.FlowNumber }}</div>
                   </div>
                   <div class="center">
-                    <div class="center-item">
-                      <div class="value">{{ _item.EPAmount }}</div>
-                      <div class="label">EP</div>
-                    </div>
-                    <div class="center-item">
-                      <div class="value">{{ _item.Netincome }}</div>
-                      <div class="label">USDT</div>
-                    </div>
+                    <div class="center-item"><div class="value">{{ _item.EPAmount }}</div><div class="label">EP</div></div>
+                    <div class="center-item"><div class="value">{{ _item.Netincome }}</div><div class="label">USDT</div></div>
                   </div>
                   <div class="bottom">
                     <div class="left">{{ _item.Nation }}</div>
@@ -118,53 +94,30 @@
               </div>
             </van-list>
           </van-pull-refresh>
-
         </van-tab>
       </van-tabs>
     </div>
 
     <div id="detail-page" v-if="showDetail">
       <van-nav-bar title="出售詳情" left-arrow @click-left="closeDetail"></van-nav-bar>
-      
       <div class="detail-card">
-        <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
-          {{ currentItem.EPAmount }} EP
-        </div>
-        <div style="color: #666;">
-          卖家: {{ currentItem.Seller.FlowNumber }}
-        </div>
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">{{ currentItem.EPAmount }} EP</div>
+        <div style="color: #666;">卖家: {{ currentItem.Seller.FlowNumber }}</div>
       </div>
-
       <van-goods-action>
-        <van-goods-action-button 
-          type="primary" 
-          text="確認購買" 
-          @click="onBuyClick"
-          color="linear-gradient(to right, #00C0F2, #BFFC85)"
-        ></van-goods-action-button>
+        <van-goods-action-button type="primary" text="確認購買" @click="onBuyClick" color="linear-gradient(to right, #00C0F2, #BFFC85)"></van-goods-action-button>
       </van-goods-action>
     </div>
 
     <div id="success-page" v-if="showSuccess">
       <van-nav-bar title="操作結果" left-arrow @click-left="goBackToList"></van-nav-bar>
-      
       <div class="success-content">
-        <div class="success-icon">
-          <van-icon name="checked" color="#07c160" size="80" />
-        </div>
-        
+        <van-icon name="checked" color="#07c160" size="80" style="margin-bottom:20px"></van-icon>
         <div class="success-title">搶單成功，請盡快付款</div>
-        
-        <div class="success-desc">
-          為了避免您的交易信用降低，請您及時轉賬給賣家並在“買賣中心”中點擊“確認付款”按鈕
-        </div>
-
+        <div class="success-desc">請及時轉賬給賣家</div>
         <div class="success-btns">
-          <van-button size="large" class="btn-green">返回玩家账户 (ID)</van-button>
-          
-          <van-button size="large" class="btn-white" @click="goBackToList">
-            返回出售列表
-          </van-button>
+          <van-button size="large" type="primary">返回玩家账户</van-button>
+          <van-button size="large" plain type="default" @click="goBackToList">返回出售列表</van-button>
         </div>
       </div>
     </div>
@@ -176,18 +129,8 @@
 
   <script>
     window.APP = {
-      GLOBAL: {
-        getUserModel: () => ({ FlowNumber: 'MyUser123' }),
-        toastMsg: (msg) => vant.Toast(msg)
-      },
+      GLOBAL: { getUserModel: () => ({ FlowNumber: 'MyUser123' }), toastMsg: (msg) => vant.Toast(msg) },
       CONFIG: { BASE_Shunt: 'https://mock-api.com/' }
-    };
-
-    const mockLanguage = {
-      INPUT_PLAYER_ID: '请输入玩家ID',
-      SEARCH: '搜索',
-      LI_1_TEXT: 'EP数量',
-      RECEIVE_BUTTON: '确认收款'
     };
 
     window._vue = new Vue({
@@ -195,101 +138,81 @@
       data: {
         tabActive: 0,
         showDetail: false,
-        showSuccess: false, // 新增：控制成功页显示
+        showSuccess: false,
         currentItem: {},
-        language: mockLanguage,
-        language2: { t1: '下拉刷新', t2: '释放刷新', t3: '加载中...', t4: '刷新成功' },
-        language3: { t1: '没有更多了' },
+        refreshCount: 0, // === 计数器 ===
+        language: { INPUT_PLAYER_ID: '请输入ID', SEARCH: '搜索', LI_1_TEXT: 'EP' },
+        language2: { t1: '下拉', t2: '释放', t3: '加载中', t4: '成功' },
+        language3: { t1: '没有更多' },
         currentUser: { FlowNumber: 'Me' },
         tabControl: [
-          {
-            title: '挂單中', 
-            list: [], pageIndex: 0, isLoading: false, loading: false, finished: false, isReloading: false
-          },
+          { title: '挂單中', list: [], pageIndex: 0, isLoading: false, loading: false, finished: false, isReloading: false },
           { title: '交易中', list: [] },
           { title: '已完成', list: [] }
         ]
       },
       methods: {
+        // === 核心模拟逻辑 ===
         loadPageData() {
           const tab = this.tabControl[this.tabActive];
-          tab.isLoading = true;
-          console.log('[Mock] Loading data...');
+          tab.isLoading = true; // 1. 标记加载中
           
+          this.refreshCount++;
+          console.log(`[Mock] 正在刷新... (第 ${this.refreshCount} 次请求)`);
+          
+          // 模拟网络延迟 300ms
           setTimeout(() => {
-            const mockData = [
-              {
-                Id: 101, EPAmount: 290, Netincome: 265, Currency: 'USDT', Nation: 'Global-USDT',
-                StatusName: '出售中', CreateTime: '2025/12/11 16:18:40',
-                Seller: { FlowNumber: 'qx1818', Avatar: '' }
-              },
-              {
-                Id: 102, EPAmount: 500, Netincome: 480, Currency: 'USDT', Nation: 'Global-USDT',
-                StatusName: '出售中', CreateTime: '2025/12/11 16:20:00',
-                Seller: { FlowNumber: 'seller02', Avatar: '' }
-              }
-            ];
-            if (this.tabActive === 0) { tab.list = mockData; } else { tab.list = []; }
-            tab.loading = false; tab.isLoading = false; tab.isReloading = false;
-            console.log('[Mock] Data loaded.');
-          }, 500); 
+            const mockOrder = {
+              Id: 999, EPAmount: 888, Netincome: 800, Currency: 'USDT', Nation: 'Global',
+              StatusName: '出售中', CreateTime: '刚刚', Seller: { FlowNumber: 'Boss888', Avatar: '' }
+            };
+
+            // === 控制出单逻辑 ===
+            // 只有当 tab 为 0，且刷新次数 >= 4 时，才返回数据
+            if (this.tabActive === 0 && this.refreshCount >= 4) {
+              tab.list = [mockOrder];
+              console.log('[Mock] ✅ 订单已放出！');
+            } else {
+              tab.list = [];
+              console.log('[Mock] ❌ 暂无订单');
+            }
+            
+            // 2. 标记加载结束 (脚本会检测这个 false 状态)
+            tab.loading = false;
+            tab.isLoading = false; 
+            tab.isReloading = false;
+          }, 300); 
         },
 
-        onRefresh() {
-          this.tabControl[this.tabActive].finished = false;
-          this.loadPageData();
-        },
-
-        loadMore() {
-          setTimeout(() => {
-            this.tabControl[this.tabActive].loading = false;
-            this.tabControl[this.tabActive].finished = true;
-          }, 500);
-        },
-
+        onRefresh() { this.tabControl[this.tabActive].finished = false; this.loadPageData(); },
+        loadMore() { setTimeout(() => { this.tabControl[this.tabActive].loading = false; }, 500); },
         onTabClick() { this.loadPageData(); },
-
+        
         gotoDetail(item) {
-          console.log('[Mock] Clicked Item:', item);
+          console.log('[Mock] 进入详情页');
           this.currentItem = item;
           this.showDetail = true;
         },
-
         closeDetail() { this.showDetail = false; },
 
-        // === 核心逻辑：模拟点击购买流程 ===
         onBuyClick() {
-          console.log('[Mock] Buy Clicked. Showing Dialog...');
-          
-          this.$dialog.confirm({
-            title: '購買EP交易確認',
-            message: '确认要购买此订单吗？',
-            confirmButtonText: '確認', 
-            cancelButtonText: '取消'
-          })
-          .then(() => {
-            // 模拟服务器延迟
-            this.$toast.loading({ duration: 0, forbidClick: true, message: '抢单中...' });
-            
-            setTimeout(() => {
-              this.$toast.clear();
-              // 跳转到成功页
-              this.showDetail = false;
-              this.showSuccess = true; 
-              console.log('[Mock] Order Success. Redirected to Result Page.');
-            }, 800);
-          })
-          .catch(() => {});
+          this.$dialog.confirm({ title: '購買EP交易確認', message: '确认购买？', confirmButtonText: '確認', cancelButtonText: '取消' })
+            .then(() => {
+              this.$toast.loading({ duration: 0, forbidClick: true, message: '抢单中...' });
+              setTimeout(() => {
+                this.$toast.clear();
+                this.showDetail = false;
+                this.showSuccess = true;
+              }, 500);
+            }).catch(() => {});
         },
 
-        // 模拟返回列表页
         goBackToList() {
-          console.log('[Mock] Returning to list...');
           this.showSuccess = false;
-          this.showDetail = false;
-          this.loadPageData(); // 重新加载列表，模拟刷新
+          this.refreshCount = 0; // 重置计数器，方便下一轮测试
+          this.tabControl[0].list = [];
+          this.loadPageData();
         },
-        
         numberFormat(val) { return val; }
       },
       mounted() {
