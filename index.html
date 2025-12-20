@@ -1,255 +1,507 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover" />
-    <title>AK/EP 原版复刻 (v5.0)</title>
-    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AK/EP 模拟交易</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@2.12/lib/index.css" />
-
     <style>
-        /* ============================================================
-           1. 基础样式 (来自 base.css)
-           ============================================================ */
-        body, html { height: 100%; background-color: #f5f5f5; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        * { box-sizing: border-box; }
+        /* --- 全局基础样式 --- */
+        body {
+            background-color: #f7f8fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Segoe UI, Arial, Roboto, "PingFang SC", "miui", "Hiragino Sans GB", "Microsoft Yahei", sans-serif;
+            margin: 0;
+            color: #333;
+            -webkit-font-smoothing: antialiased;
+        }
         [v-cloak] { display: none; }
+        #app { padding-bottom: 50px; min-height: 100vh; }
 
-        /* ============================================================
-           2. 组件样式 (来自 vue-component.css)
-           ============================================================ */
-        .SpecialShapedLayout3 { position: relative; }
-        .SpecialShapedLayout3 .bg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
-        .SpecialShapedLayout3 .bg::before { content: ""; position: absolute; top: 0; left: 0; width: 60%; height: 50%; background-image: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%); border-bottom-right-radius: 100px; opacity: 0.1; }
+        /* --- 通用：渐变色变量 --- */
+        :root {
+            --gradient-primary: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%);
+            --gradient-green: linear-gradient(90deg, #70C160 0%, #5CB85C 100%);
+        }
+
+        /* --- 页面 1: 列表页样式 --- */
+        .search-bar {
+            background-color: transparent !important;
+            padding: 10px 16px;
+        }
+        .van-search__content {
+            background-color: #fff;
+            border-radius: 999px;
+            border: 1px solid #eee;
+        }
+
+        /* 卡片样式核心 */
+        .trade-card {
+            background: #fff;
+            margin: 15px 16px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: relative;
+        }
         
-        .CustomButton { user-select: none; -webkit-tap-highlight-color: transparent; }
-        .CustomButton .custom-content {
-            font-size: 16px; font-weight: 400; line-height: 22px; color: #fff;
-            background-image: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%);
-            border-radius: 999px; position: relative; display: flex; align-items: center; justify-content: center;
-            height: 45px; /* 默认高度 */
-            box-shadow: 0 4px 10px rgba(0, 192, 242, 0.3);
+        .card-top {
+            padding: 16px 16px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .CustomButton:active .custom-content { opacity: 0.9; transform: scale(0.98); }
-
-        .TopBack { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; height: 44px; background: #fff; padding: 0 15px; border-bottom: 1px solid #ebedf0; }
-        .TopBack .icon { font-size: 20px; color: #333; }
-        .TopBack .title { font-size: 17px; font-weight: 500; position: absolute; left: 50%; transform: translateX(-50%); }
-
-        /* ============================================================
-           3. 详情页专用样式 (来自 ep.list.detail.css)
-           ============================================================ */
-        .ep-list-detail {
-            flex-grow: 1; background-color: #f5f5f5; display: flex; flex-direction: column; padding: 20px;
+        .user-info {
+            display: flex;
+            align-items: center;
         }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #eee;
+            background-size: cover;
+            margin-right: 10px;
+            border: 1px solid #f0f0f0;
+        }
+        .status-tag {
+            background: linear-gradient(90deg, #3EE5C3 0%, #28D8A1 100%);
+            color: white;
+            padding: 4px 12px;
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+            font-size: 12px;
+            margin-right: -16px; /* 贴边 */
+            box-shadow: -2px 2px 5px rgba(40, 216, 161, 0.3);
+        }
+
+        .card-center {
+            padding: 15px 0;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            position: relative;
+        }
+        /* 模拟分割线 */
+        .card-center::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 16px; right: 16px;
+            height: 1px;
+            border-top: 1px dashed #eee;
+        }
+
+        .data-item .num { font-size: 20px; font-weight: bold; color: #333; line-height: 1.2; }
+        .data-item .label { font-size: 12px; color: #999; margin-top: 4px; }
+
+        .card-bottom {
+            background: var(--gradient-primary);
+            padding: 6px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            font-size: 11px;
+            /* 下方两个圆角为0，因为卡片本身有圆角，这里为了美观可以微调 */
+        }
+
+        /* 悬浮抢单按钮 */
+        .float-btn {
+            position: fixed;
+            bottom: 120px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #2dbbf1;
+            box-shadow: 0 4px 10px rgba(45, 187, 241, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            z-index: 100;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .float-btn::after {
+            content: '';
+            position: absolute;
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
+            border-radius: 50%;
+            border: 1px solid rgba(45, 187, 241, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+
+        /* --- 页面 2: 详情页样式 --- */
+        .page-header {
+            background: #fff;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 18px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        .page-header .title { flex: 1; text-align: center; padding-right: 30px; }
         
-        /* 模拟 SpecialShapedLayout3 内部结构 */
-        .ep-list-detail .SpecialShapedLayout3 {
-            background-color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 30px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.03); position: relative; overflow: hidden;
+        .detail-limit-card {
+            background: #fff;
+            margin: 15px 16px;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .limit-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .limit-row:last-child { margin-bottom: 0; }
+        .limit-row .label { color: #666; font-weight: bold; }
+        .limit-row .val { color: #333; font-weight: bold; }
+
+        .btn-large-submit {
+            margin: 40px 20px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            background: var(--gradient-primary);
+            box-shadow: 0 5px 15px rgba(0, 192, 242, 0.3);
+            cursor: pointer;
         }
 
-        .ep-list-detail .top {
-            display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; position: relative; z-index: 2;
+        /* --- 页面 3: 成功页样式 --- */
+        .success-page {
+            background: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
         }
-        .ep-list-detail .top .avatar {
-            width: 50px; height: 50px; border-radius: 50%; background-color: #eee; margin-bottom: 8px; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
         }
-        .ep-list-detail .top .user-name { font-size: 14px; color: #666; }
-
-        .ep-list-detail .count {
-            font-size: 36px; font-weight: bold; text-align: center; color: #00C0F2; margin-bottom: 30px; position: relative; z-index: 2;
+        .success-text { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .success-sub { font-size: 14px; color: #999; text-align: center; padding: 0 40px; line-height: 1.5; margin-bottom: 40px; }
+        
+        .btn-green {
+            width: 85%;
+            padding: 12px 0;
+            background-color: #70C160;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 15px;
+        }
+        .btn-white {
+            width: 85%;
+            padding: 12px 0;
+            background-color: #fff;
+            color: #666;
+            border: 1px solid #eee;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 15px;
         }
 
-        .ep-list-detail .list { display: flex; flex-direction: column; row-gap: 16px; position: relative; z-index: 2; }
-        .ep-list-detail .list .item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .ep-list-detail .list .item .label { color: #999; }
-        .ep-list-detail .list .item .value { color: #333; font-weight: 500; }
+        /* 密码输入弹窗自定义 */
+        .password-dialog-content { padding: 20px; }
+        .password-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+        }
+        .password-input:focus { border-color: #00C0F2; }
 
-        /* ============================================================
-           4. 列表页简单模拟 (用于触发脚本)
-           ============================================================ */
-        .EpList { padding: 15px; }
-        .items .item { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .item .top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
-        .item .avatar { width: 40px; height: 40px; border-radius: 50%; background: #eee; }
-        .item .bottom { background: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%); color: #fff; padding: 5px 15px; border-radius: 20px; display: flex; justify-content: space-between; font-size: 12px; }
-        .empty-tip { text-align: center; color: #999; padding-top: 50px; }
-
-        /* 成功页模拟 */
-        #success-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 1001; text-align: center; padding-top: 80px; }
-        .ak-target-hit { border: 2px solid red !important; }
     </style>
 </head>
-
 <body>
-    <div id="app" v-cloak>
-        
-        <div class="EpList" v-show="!showDetail && !showSuccess">
-            <van-pull-refresh v-model="isReloading" @refresh="onRefresh">
-                 <div style="background:#fff3e0; color:#e65100; padding:8px; font-size:12px; text-align:center; margin-bottom:10px; border-radius:4px;">
-                    刷新次数: <b>{{ refreshCount }}</b> <span v-if="refreshCount >= 4" style="color:green; font-weight:bold;">(🔥 订单出现!)</span>
-                </div>
+
+<div id="app" v-cloak>
+    
+    <div v-if="currentPage === 'list'">
+        <van-tabs v-model="activeTab" title-active-color="#333" title-inactive-color="#666" line-width="20px" line-height="3px" color="#333">
+            <van-tab title="挂單中"></van-tab>
+            <van-tab title="交易中"></van-tab>
+            <van-tab title="已完成"></van-tab>
+        </van-tabs>
+
+        <div class="search-bar">
+            <van-search v-model="searchVal" placeholder="請輸入ID或登錄名" left-icon="search" shape="round"></van-search>
+        </div>
+
+        <van-pull-refresh v-model="isRefreshing" @refresh="onRefresh" success-text="刷新成功">
+            <van-list v-model="loading" :finished="finished" finished-text="沒有更多了" @load="onLoad">
                 
-                <div class="items">
-                    <div v-if="list.length === 0" class="empty-tip">暂无挂单数据 (下拉刷新)</div>
-                    <div class="item" v-for="item in list" :key="item.Id" @click="gotoDetail(item)">
-                        <div class="top"><div class="avatar"></div><div class="name">{{ item.Seller.FlowNumber }}</div></div>
-                        <div class="bottom"><div>{{ item.EPAmount }} EP</div><div>{{ item.CreateTime }}</div></div>
+                <div class="trade-card" v-for="(item, index) in list" :key="index" @click="goDetail(item)">
+                    <div class="card-top">
+                        <div class="user-info">
+                            <div class="avatar" :style="{backgroundImage: 'url(' + item.avatar + ')'}"></div>
+                            <span style="font-weight: bold; font-size: 16px;">{{ item.name }}</span>
+                        </div>
+                        <div class="status-tag">出售中</div>
+                    </div>
+                    
+                    <div class="card-center">
+                        <div class="data-item">
+                            <div class="num">{{ item.ep }}</div>
+                            <div class="label">EP數量</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="num">{{ item.usdt }}</div>
+                            <div class="label">USDT</div>
+                        </div>
+                    </div>
+
+                    <div class="card-bottom">
+                        <span>Global-USDT</span>
+                        <span>{{ item.time }}</span>
                     </div>
                 </div>
-            </van-pull-refresh>
-        </div>
+            </van-list>
+        </van-pull-refresh>
 
-        <div id="detail-page" v-if="showDetail" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f5f5f5;z-index:999;display:flex;flex-direction:column;">
-            
-            <div class="TopBack">
-                <van-icon name="arrow-left" class="icon" @click="closeDetail"></van-icon>
-                <div class="title">{{ language.TITLE_TEXT }}</div>
-                <div style="width:20px"></div>
-            </div>
+        <div class="float-btn" @click="onQuickGrab">抢!</div>
 
-            <div class="ep-list-detail">
-                
-                <div class="SpecialShapedLayout3">
-                    <div class="bg"></div> <div class="top">
-                        <div class="avatar"></div> <div class="user-name">{{ currentItem.Seller.FlowNumber }}</div>
-                    </div>
-
-                    <div class="count">{{ currentItem.EPAmount }}</div>
-
-                    <div class="list">
-                        <div class="item">
-                            <span class="label">{{ language.LI_1_TEXT }}</span>
-                            <span class="value">{{ currentItem.Netincome }} USDT</span>
-                        </div>
-                        <div class="item">
-                            <span class="label">{{ language.LI_2_TEXT }}</span>
-                            <span class="value">EP{{ currentItem.Id }}</span>
-                        </div>
-                        
-                        <div class="item">
-                            <span class="label">{{ language.LI_3_TEXT }}</span> <span class="value" :style="{ color: currentItem.Status === 1 ? '#00C0F2' : '' }">
-                                {{ currentItem.StatusName }}
-                            </span>
-                        </div>
-
-                        <div class="item">
-                            <span class="label">{{ language.LI_4_TEXT }}</span>
-                            <span class="value">{{ currentItem.CreateTime }}</span>
-                        </div>
-                    </div>
-                    </div>
-
-                <div class="CustomButton" style="margin: 0 25px;" @click="confirm">
-                    <div class="custom-content">
-                        {{ language.CONFIRM_BUTTON_TEXT }}
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <div id="success-page" v-if="showSuccess">
-             <van-icon name="checked" color="#07c160" size="80" style="margin-bottom:20px"></van-icon>
-             <h3>搶單成功</h3>
-             <van-button plain @click="goBackToList">返回列表</van-button>
-        </div>
-
-        <van-dialog id="van-dialog"></van-dialog>
+        <van-tabbar v-model="tabbarActive" active-color="#00C0F2" inactive-color="#999">
+            <van-tabbar-item icon="home-o">首頁</van-tabbar-item>
+            <van-tabbar-item icon="exchange">AK交易</van-tabbar-item>
+            <van-tabbar-item icon="balance-list" badge="1">EP交易</van-tabbar-item>
+            <van-tabbar-item icon="user-o">我的</van-tabbar-item>
+        </van-tabbar>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6/dist/vue.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vant@2.12/lib/vant.min.js"></script>
 
-    <script>
-        // 模拟全局对象
-        window.APP = { GLOBAL: { toastMsg: (msg) => vant.Toast(msg) } };
+    <div v-if="currentPage === 'detail'" style="background-color: #f7f8fa; min-height: 100vh;">
+        <div class="page-header">
+            <van-icon name="arrow-left" size="20" @click="goBack" style="padding: 10px;"></van-icon>
+            <div class="title">出售詳情</div>
+        </div>
 
-        new Vue({
-            el: '#app',
-            data: {
-                // 状态控制
-                showDetail: false,
-                showSuccess: false,
-                isReloading: false,
-                refreshCount: 0,
+        <div class="trade-card" style="margin-top: 20px;">
+            <div class="card-top" style="border-bottom: none;">
+                <div class="user-info">
+                    <div class="avatar" :style="{backgroundImage: 'url(' + currentItem.avatar + ')'}"></div>
+                    <span style="font-weight: bold; font-size: 16px;">{{ currentItem.name }}</span>
+                </div>
+            </div>
+            
+            <div class="card-center">
+                <div class="data-item">
+                    <div class="num">{{ currentItem.ep }}</div>
+                    <div class="label">EP</div>
+                </div>
+                <div class="data-item">
+                    <div class="num">{{ currentItem.usdt }}</div>
+                    <div class="label">USDT</div>
+                </div>
+            </div>
+
+            <div class="card-bottom">
+                <span>Global-USDT</span>
+                <span>{{ currentItem.time }}</span>
+            </div>
+        </div>
+
+        <div class="detail-limit-card">
+            <div class="limit-row">
+                <span class="label">買家付款期限</span>
+                <span class="val">120分鐘</span>
+            </div>
+            <div class="limit-row">
+                <span class="label">賣家確認期限</span>
+                <span class="val">120分鐘</span>
+            </div>
+        </div>
+        
+        <div class="float-btn" style="bottom: 200px; opacity: 0.8; pointer-events: none;">抢!</div>
+
+        <div class="btn-large-submit" @click="showConfirmDialog">
+            確認購買
+        </div>
+
+        <van-dialog v-model="showPassword" title="安全驗證" show-cancel-button confirm-button-text="確認" cancel-button-text="取消" @confirm="processBuy">
+            <div class="password-dialog-content">
+                <div style="text-align: center; color: #999; font-size: 14px; margin-bottom: 5px;">請輸入二級密碼</div>
+                <input type="password" class="password-input" placeholder="******" v-model="password" />
+            </div>
+        </van-dialog>
+    </div>
+
+
+    <div v-if="currentPage === 'success'" class="success-page">
+        <div style="position: absolute; top: 10px; left: 10px;">
+            <van-icon name="arrow-left" size="20" @click="goHome"></van-icon>
+        </div>
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 40px;">操作結果</div>
+
+        <div class="success-icon">
+            <van-icon name="success" color="#fff" size="40" />
+        </div>
+
+        <div class="success-text">搶單成功，請盡快付款</div>
+        <div class="success-sub">
+            為了避免您的交易信用降低，請您及時轉賬給賣家並在“買賣中心”中點擊“確認付款”按鈕
+        </div>
+
+        <div class="btn-green" @click="goHome">返回玩家賬戶 (ID)</div>
+        <div class="btn-white" @click="goHome">返回出售列表</div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vant@2.12/lib/vant.min.js"></script>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                // 页面状态控制: 'list', 'detail', 'success'
+                currentPage: 'list',
                 
-                // 模拟数据对象 (PageModel)
-                currentItem: {
-                    Id: 0, EPAmount: 0, Netincome: 0, Status: 1, 
-                    StatusName: '', CreateTime: '', Seller: { FlowNumber: '' }
-                },
+                // 列表页数据
+                activeTab: 0,
+                searchVal: '',
+                tabbarActive: 2,
+                isRefreshing: false,
+                loading: false,
+                finished: false,
+                
+                // 模拟数据源
                 list: [],
-
-                // 语言包 (照搬源码变量名)
-                language: {
-                    TITLE_TEXT: '出售詳情',
-                    LI_1_TEXT: '实付金额',
-                    LI_2_TEXT: '交易单号',
-                    LI_3_TEXT: '状态', // <--- 这里对应“状态”
-                    LI_4_TEXT: '创建时间',
-                    CONFIRM_BUTTON_TEXT: '確認購買', // <--- 脚本识别关键字
-                    POPUP_TITLE_TEXT: '購買EP交易確認',
-                    POPUP_MESSAGE_TEXT: '确认要购买此订单吗？',
-                    PASSWORD_DIALOG_CONFIRM: '確認',
-                    PASSWORD_DIALOG_CANCEL: '取消'
+                
+                // 详情页数据
+                currentItem: {},
+                showPassword: false,
+                password: '',
+            };
+        },
+        methods: {
+            // 生成模拟数据
+            generateData(isRefresh = false) {
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+                
+                const newData = [
+                    { id: 1, name: 'qx1818', ep: '290', usdt: '265.5222', time: timeStr, avatar: 'https://img.yzcdn.cn/vant/cat.jpeg' },
+                    { id: 2, name: 'trader_01', ep: '500', usdt: '458.1200', time: timeStr, avatar: '' },
+                    { id: 3, name: 'winner_ak', ep: '1000', usdt: '915.0000', time: timeStr, avatar: '' },
+                    { id: 4, name: 'lucky_ep', ep: '150', usdt: '137.5000', time: timeStr, avatar: '' }
+                ];
+                
+                if (isRefresh) {
+                    this.list = newData;
+                } else {
+                    this.list = [...this.list, ...newData];
                 }
             },
-            methods: {
-                onRefresh() {
-                    this.refreshCount++;
-                    setTimeout(() => {
-                        this.isReloading = false;
-                        if (this.refreshCount >= 4) {
-                            // 模拟从后端拿到的数据
-                            this.list = [{
-                                Id: 123456,
-                                EPAmount: 5000,
-                                Netincome: 4600,
-                                Status: 1, // 1对应蓝色
-                                StatusName: '出售中', // <--- 这里对应“出售中”
-                                CreateTime: '2025-12-20 12:00:00',
-                                Seller: { FlowNumber: 'TestUser888' }
-                            }];
-                        } else {
-                            this.list = [];
-                        }
-                    }, 300);
-                },
-                gotoDetail(item) {
-                    this.currentItem = item;
-                    this.showDetail = true;
-                },
-                closeDetail() {
-                    this.showDetail = false;
-                },
-                confirm() {
-                    // 模拟源码中的弹窗逻辑
-                    this.$dialog.confirm({
-                        title: this.language.POPUP_TITLE_TEXT,
-                        message: this.language.POPUP_MESSAGE_TEXT,
-                        confirmButtonText: this.language.PASSWORD_DIALOG_CONFIRM,
-                        cancelButtonText: this.language.PASSWORD_DIALOG_CANCEL
-                    }).then(() => {
-                        this.$toast.loading({ duration: 0, forbidClick: true, message: '请求中...' });
-                        setTimeout(() => {
-                            this.$toast.clear();
-                            this.showDetail = false;
-                            this.showSuccess = true;
-                        }, 500);
-                    }).catch(() => {});
-                },
-                goBackToList() {
-                    this.showSuccess = false;
-                    this.refreshCount = 0;
-                    this.list = [];
+            
+            // 下拉刷新
+            onRefresh() {
+                setTimeout(() => {
+                    this.generateData(true);
+                    this.isRefreshing = false;
+                    this.finished = false; // 重置结束状态
+                    this.$toast('刷新成功');
+                }, 1000);
+            },
+            
+            // 列表加载
+            onLoad() {
+                setTimeout(() => {
+                    this.generateData();
+                    this.loading = false;
+                    // 模拟数据加载完毕
+                    if (this.list.length >= 8) {
+                        this.finished = true;
+                    }
+                }, 1000);
+            },
+            
+            // 跳转详情页
+            goDetail(item) {
+                this.currentItem = item;
+                this.currentPage = 'detail';
+                window.scrollTo(0,0);
+            },
+            
+            // 悬浮抢单（默认抢第一个）
+            onQuickGrab() {
+                if(this.list.length > 0) {
+                    this.goDetail(this.list[0]);
+                } else {
+                    this.$toast('当前无订单');
                 }
             },
-            mounted() {
-                this.onRefresh();
+            
+            // 返回列表
+            goBack() {
+                this.currentPage = 'list';
+                this.password = '';
+            },
+            
+            // 显示密码框
+            showConfirmDialog() {
+                this.showPassword = true;
+            },
+            
+            // 处理购买逻辑
+            processBuy() {
+                // 这里模拟验证请求
+                this.$toast.loading({
+                    message: '處理中...',
+                    forbidClick: true,
+                    duration: 1000
+                });
+                
+                setTimeout(() => {
+                    this.$toast.clear();
+                    this.showPassword = false;
+                    this.password = '';
+                    this.currentPage = 'success';
+                }, 1000);
+            },
+            
+            // 返回首页/列表
+            goHome() {
+                this.currentPage = 'list';
+                this.onRefresh(); // 刷新列表
             }
-        });
-    </script>
+        },
+        mounted() {
+            // 初始化一些数据
+            this.generateData(true);
+        }
+    });
+</script>
+
 </body>
 </html>
