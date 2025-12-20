@@ -3,26 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no,viewport-fit=cover" />
-  <title>AK/EP 真实还原版 (v3.0)</title>
+  <title>AK/EP 1:1 严格还原版 (v4.0)</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@2.12/lib/index.css" />
 
   <style>
-    /* === 全局基础 === */
-    body { background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; margin: 0; padding: 0; }
+    /* === 基础重置 === */
+    body, html { height: 100%; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; margin: 0; padding: 0; }
     [v-cloak] { display: none; }
+    * { box-sizing: border-box; }
 
     /* =========================================
-       1. 列表页样式 (保持不变，模拟 ep.list.css)
+       1. 列表页 (保持原样以触发脚本)
        ========================================= */
     .EpList { padding-top: 10px; padding-bottom: 60px; }
     .items { display: flex; flex-direction: column; gap: 15px; padding: 15px; min-height: 300px; }
-    
-    /* 脚本目标：列表卡片 */
-    .items .item {
-      background: #fff; border-radius: 10px; padding: 15px;
-      position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
-    }
+    .items .item { background: #fff; border-radius: 10px; padding: 15px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; }
     .item .top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
     .item .avatar { width: 40px; height: 40px; border-radius: 50%; background: #eee; }
     .item .name { font-weight: bold; font-size: 16px; color: #333; }
@@ -30,55 +26,60 @@
     .center-item { text-align: center; }
     .center-item .value { font-size: 20px; font-weight: bold; color: #000; }
     .center-item .label { font-size: 12px; color: #666; }
-    .item .bottom { 
-      background: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%);
-      color: #fff; padding: 5px 15px; border-radius: 20px; 
-      display: flex; justify-content: space-between; font-size: 12px;
-    }
+    .item .bottom { background: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%); color: #fff; padding: 5px 15px; border-radius: 20px; display: flex; justify-content: space-between; font-size: 12px; }
     .empty-tip { text-align: center; color: #999; padding-top: 80px; font-size: 14px; }
 
     /* =========================================
-       2. 详情页样式 (严格对应 ep.list.detail.css)
+       2. 详情页 (严格按照 ep.list.detail.css)
        ========================================= */
     #detail-page {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #f5f5f5; z-index: 999; display: flex; flex-direction: column;
+    }
+
+    /* 主容器 */
+    .EpListDetail {
+      flex-grow: 1;
+      background-color: #f5f5f5;
+      display: flex; flex-direction: column;
+      padding: 20px;
       overflow-y: auto;
     }
 
-    /* 容器 */
-    .EpListDetail {
-      padding: 20px;
-      display: flex; flex-direction: column;
+    .content-container {
+      flex-grow: 1;
+      margin-top: 20px;
     }
-    .content-container { margin-top: 10px; }
 
-    /* --- 上部卡片: Basic Info --- */
+    /* --- 卡片 1: Basic Info --- */
     .basic-info {
         background-color: #FFFDFD;
         border: 1px solid #ddd;
         border-radius: 20px;
-        padding-bottom: 20px;
+        /* css snippet implies specific padding/margins inside children */
     }
-    /* 顶部卖家信息 */
+
+    /* 顶部卖家 */
     .basic-info .top {
         display: flex; align-items: center; column-gap: 15px;
         margin: 12px 20px 0; padding: 0 6px 13.5px;
         border-bottom: 1px dashed #FFD0A8;
     }
     .basic-info .top .avatar {
-        width: 45px; height: 45px; border-radius: 50%; border: 2px solid #cdcdcd; background: #eee;
+        width: 45px; height: 45px; 
+        border: 2px solid #cdcdcd; border-radius: 50%;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%23eee"><circle cx="50" cy="50" r="50"/></svg>');
     }
     .basic-info .top .seller-name {
         font-weight: bold; font-size: 16px; color: #333;
     }
 
-    /* 中间金额大字 */
+    /* 中间金额 (模拟常见布局，CSS里未详述但结构中存在) */
     .basic-info .center {
-        text-align: center; padding: 30px 0;
+        text-align: center; padding: 30px 0 20px;
     }
     .basic-info .center .amount {
-        font-size: 34px; font-weight: bold; color: #00C0F2; line-height: 1;
+        font-size: 36px; font-weight: 600; color: #00C0F2; line-height: 1;
     }
     .basic-info .center .label {
         font-size: 12px; color: #999; margin-top: 8px;
@@ -86,18 +87,25 @@
 
     /* 底部渐变条 */
     .basic-info .bottom {
-        margin: 0 20px;
+        margin: 0 20px 20px; /* 底部留白 */
         background-image: linear-gradient(90deg, #00C0F2 0%, #BFFC85 100%);
         border-radius: 20px;
-        height: 30px; /* 模拟装饰条高度 */
-        display: flex; align-items: center; padding: 0 15px;
+        padding: 3px 15.5px;
+        display: flex; justify-content: space-between; align-items: center;
+        height: 28px;
     }
-    
-    /* --- 下部列表: Time Items --- */
+    .basic-info .bottom .left, .basic-info .bottom .time {
+        font-size: 11px; color: #fff; line-height: 22px;
+    }
+    .basic-info .bottom .left { font-weight: 590; }
+
+    /* --- 卡片 2: Time Items (无状态行) --- */
     .time-items {
-        display: flex; flex-direction: column; row-gap: 16px;
+        display: flex; flex-direction: column;
+        row-gap: 16px;
         border: 1px solid #ddd; background-color: #fff;
-        border-radius: 20px; margin-top: 20px; padding: 30px 24px;
+        border-radius: 20px; margin-top: 20px;
+        padding: 30px 24px;
     }
     .time-item {
         display: flex; justify-content: space-between; align-items: center;
@@ -111,12 +119,10 @@
         padding-bottom: 16px; border-bottom: 1px solid #f5f5f5;
     }
 
-    /* --- 按钮组件 (模拟 CustomButton) --- */
-    .button-container { margin-top: 40px; padding: 0 10px; }
-    
-    .CustomButton {
-        cursor: pointer; user-select: none;
-    }
+    /* --- 按钮组件 --- */
+    .button-wrapper { margin-top: 40px; padding: 0 10px; }
+
+    .CustomButton { cursor: pointer; user-select: none; }
     .CustomButton .custom-content {
         height: 45px;
         border-radius: 999px;
@@ -128,7 +134,7 @@
     .CustomButton:active .custom-content { opacity: 0.9; transform: scale(0.98); }
 
     /* =========================================
-       3. 成功页样式
+       3. 成功页
        ========================================= */
     #success-page {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -139,7 +145,7 @@
     .success-title { font-size: 22px; font-weight: bold; margin: 20px 0 10px; color: #333; }
     .success-desc { font-size: 14px; color: #999; margin-bottom: 50px; line-height: 1.6; }
     
-    /* 脚本特效模拟 */
+    /* 模拟选中特效 */
     .ak-target-hit { border: 2px solid red !important; animation: ak-shake 0.4s; }
     @keyframes ak-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
   </style>
@@ -155,7 +161,7 @@
             <van-list v-model="item.loading" :finished="item.finished" finished-text="没有更多了" @load="loadMore">
               <div style="background:#fff3e0; color:#e65100; padding:8px; font-size:12px; text-align:center;">
                 模拟环境：第 <b>{{ refreshCount }}</b> 次刷新 
-                <span v-if="refreshCount < 4">(暂无)</span>
+                <span v-if="refreshCount < 4">(暂无订单)</span>
                 <span v-else style="color:green; font-weight:bold;">(🔥 出现订单!)</span>
               </div>
 
@@ -201,7 +207,9 @@
                     <div class="label">EP数量</div>
                 </div>
                 <div class="bottom">
-                    </div>
+                    <div class="left">{{ currentItem.Nation }}</div>
+                    <div class="time">{{ currentItem.CreateTime }}</div>
+                </div>
             </div>
 
             <div class="time-items">
@@ -219,7 +227,7 @@
                 </div>
             </div>
 
-            <div class="button-container">
+            <div class="button-wrapper">
                 <div class="CustomButton" @click="onBuyClick" role="button">
                     <div class="custom-content">
                         確認購買
@@ -276,13 +284,13 @@
           setTimeout(() => {
             if (this.tabActive === 0 && this.refreshCount >= 4) {
               tab.list = [{
-                Id: 888888, EPAmount: 1000, Netincome: 920, Currency: 'USDT', Nation: 'Global',
-                StatusName: '出售中', CreateTime: '刚刚', Seller: { FlowNumber: 'RichMan001' }
+                Id: 996888, EPAmount: 500, Netincome: 480, Currency: 'USDT', Nation: 'Global',
+                StatusName: '出售中', CreateTime: '刚刚', Seller: { FlowNumber: 'RichPlayer_01' }
               }];
-              console.log('[Mock] ✅ 订单已刷新出来！');
+              console.log('[Mock] ✅ 订单出现！');
             } else {
               tab.list = [];
-              console.log('[Mock] ⏳ 无订单，继续等待...');
+              console.log('[Mock] ⏳ 继续等待...');
             }
             tab.loading = false; tab.isLoading = false; tab.isReloading = false;
           }, 300); 
@@ -299,7 +307,7 @@
         closeDetail() { this.showDetail = false; },
 
         onBuyClick() {
-          console.log('[Mock] 点击了自定义购买按钮');
+          console.log('[Mock] 点击确认购买');
           this.$dialog.confirm({
             title: '購買EP交易確認', message: '确认要购买此订单吗？', confirmButtonText: '確認', cancelButtonText: '取消'
           })
@@ -309,13 +317,13 @@
               this.$toast.clear();
               this.showDetail = false;
               this.showSuccess = true;
-              console.log('[Mock] 抢单成功，跳转结果页');
-            }, 600);
+              console.log('[Mock] 抢单成功');
+            }, 500);
           }).catch(() => {});
         },
 
         goBackToList() {
-          console.log('[Mock] 返回列表，重置流程');
+          console.log('[Mock] 返回列表');
           this.showSuccess = false;
           this.showDetail = false;
           this.refreshCount = 0; 
